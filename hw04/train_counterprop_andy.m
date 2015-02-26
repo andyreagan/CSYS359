@@ -1,26 +1,127 @@
-function W = train_counterprop_andy(A,B)
+function [W,V,rmse_all] = train_counterprop_andy(A,B,numiter,randorder)
+% train the two counterprop matrices
+%
+% INPUTS
+%
+% A(num train patterns,size input)
+% B(num train patterns,size output)
+%
+% OUTPUT
+%
+% V: Kohonen layer weights
+% W: Grossberg layer weights
 
-% size of our network
-% N = 4;
-% N = length(A[:,1]);
-N = length(A(:,1));
+% how long to train
+% numiter = 50;
+% taking this from input
 
-% set the weights
-W = zeros(N);
-% with python array access
-% W = A[:,1]'*B[:,1] + A[:,2]'*B[:,2] + A[:,3]'*B[:,3];
-% with matlab array access
-% W = A(:,1)*B(:,1)' + A(:,2)*B(:,2)' + A(:,3)*B(:,3)';
-W = (2.*A(:,1)-1)*(2.*B(:,1)-1)' + (2.*A(:,2)-1)*(2.*B(:,2)-1)' + (2.*A(:,3)-1)*(2.*B(:,3)-1)';
-% disp('weights:');
-% disp(W);
-% matrix style!!
-% W = A'*B;
-% also, convert to bipolar
-% disp(2.*A-1)
-% disp(2.*B-1)
-% W = (2.*A-1)*(2.*B-1)';
-disp('weights:');
-disp(W);
-%% test the training patterns
+% hardcode learning coeff
+alpha = 0.7; % kohonen
+beta = 0.2; % grossberg
+
+% whether to train them at the same time
+% assume for now that they are trained for the same amt of time
+traintogether = false;
+nearest_neighbor = false;
+
+num_training_patterns = length(A(:,1));
+
+% rmse_all = ones(num_training_patterns+(1-traintogether)* ...
+%                 num_training_patterns,numiter);
+rmse_all = ones(num_training_patterns,numiter);
+% rmse_avg = ones(1,numiter);
+
+input_size = length(A(1,:));
+output_size = length(B(1,:));
+
+% kohonen later
+if nearest_neighbor
+    hidden_layer_size = num_training_patterns;
+    W = A';
+else
+    hidden_layer_size = num_training_patterns+3;
+    W = rand(input_size,hidden_layer_size);
 end
+% disp(size(W));
+% grossberg layer
+V = rand(hidden_layer_size,output_size);
+
+if ~nearest_neighbor
+    fprintf('training kohonen layer\n');
+    for i=1:numiter
+        % fprintf('on training iteration no:\n');
+        % disp(i);
+        if randorder
+            order = 1:num_training_patterns;
+        else
+            order = randperm(num_training_patterns);
+        end
+        for j=order
+            % apply kohonen weights to compute middle layer
+            % in your paper, figure 4 shows that this should compute
+            % the minumim distance between input and kohonen layer
+            % weights...
+            % this just applies the weights forward:
+            % I = A(j,:)*W;
+            % and this is more akin the distance
+            % (1x3)*(3x78) = (1x78)
+            I = 1-A(j,:)*W;
+            % NOTE: these are the "z_j" in the psuedocode
+            
+            % find the index of min
+            % if we didn't take 1-... in the above, could take the max:
+            % winning_node = find(I==max(I));
+            % this variable is akin to "c" in the code
+            winning_node = find(I==min(I),1);
+            
+            % disp(I);
+            % disp(winning_node);
+    
+            % update the winning node's links in kohonen layer
+            % this should move the weights toward the input
+            
+            % fprintf('input');
+            % disp(A(j,:)');
+            % fprintf('winning row');
+            % disp(W(:,winning_node));
+            W(:,winning_node) = W(:,winning_node) + alpha^(i)*(A(j,:)'-W(:, ...
+                                                              winning_node));
+            % fprintf('winning row after');
+            % disp(W(:,winning_node));
+            
+            % update links in grossberg layer
+            % note that y' is just V(winning_node,:)
+            % since the a_j is set to 1
+            if traintogether
+                % save the error in the output
+                output_error = B(j,:)-V(winning_node,:);
+                rmse_all(j,i) = rmse(B(j,:),V(winning_node,:));
+                V(winning_node,:) = V(winning_node,:) + beta^(i)*(output_error);
+            end
+        end
+        % rmse_avg(1,i) = mean(rmse_all(:,i));
+    end
+end
+
+% train the grossberg layer
+if ~traintogether || nearest_neighbor
+    fprintf('training just grossberg layer now\n');
+    for i=1:numiter
+        if randorder
+            order = 1:num_training_patterns;
+        else
+            order = randperm(num_training_patterns);
+        end
+        for j=order
+            I = 1-A(j,:)*W;
+            winning_node = find(I==min(I),1);
+            output_error = B(j,:)-V(winning_node,:);
+            rmse_all(j,i) = rmse(B(j,:),V(winning_node,:));
+            V(winning_node,:) = V(winning_node,:) + beta^(i)*(output_error);
+        end
+    end 
+end
+
+end
+
+

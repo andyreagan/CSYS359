@@ -1,50 +1,47 @@
-function [] = test_counterprop_andy(A,B,W)
-% bidirectional associative memory (BAM) network
-% aka heteroassociative
-% accepts an input vector (hard coded here) on set of
-% neurons and produces a related but different output
-% vector on the other nuerons
-%
-% stable states are memories that are associated to eachother
-% i.e. network can run in either direction
-%
-% I left all of my work testing the vectorization of creating the
-% weight matrix :)
-%
-% 2015-02-13
-% Andy Reagan
+function [fullgrid] = test_counterprop_andy(kohonen,grossberg,interpolation,training)
+% something something something
+    
+% define the full grid to test    
+% xmax = max(interpolation(:,1));
+% ymax = max(interpolation(:,2));
+% oops, those are normalized!!
+xmax = 200;
+ymax = 250;
+fullgrid = ones(xmax,ymax);
 
-% threshold for output activation
-mu = 0;
+winner_take_all = @(x) x>=(max(x));
 
-% define activation function
-% vectorize!!
-perf = @(x) x>(mu.*ones(size(x))) + (x==(mu.*ones(size(x)))).*x;
-
-% training patterns
-% are the columns
-disp('training patterns:')
-disp(A);
-disp(B);
-
-for j=1:length(A(1,:))
-    % fetch input
-    a = A(:,j)';
-    % feed forward
-    b = a*W;
-    % apply performance rule
-    b = perf(b);
-    if min(a == perf(b*W')) < 1
-        disp('failed test')
-        disp('testing pattern')
-        disp(a);
-        disp('this is b')
-        disp(b);
-        disp('this is b put back through')
-        disp(perf(b*W'))
-    else
-        disp('passed test')
+for x=1:xmax
+    for y=1:ymax
+        % this is non vectorized
+        % % indexing!
+        % A = interpolation(x*ymax-ymax+y,:);
+        % % apply kohonen layer
+        % I = 1-A*kohonen;
+        % % threshold
+        % I = winner_take_all(I);
+        % % apply grossberg layer
+        % Y = I*grossberg;
+        % % threshold
+        % Y = winner_take_all(Y);
+        % % take the number from the output!
+        % fullgrid(x,y) = find(Y==max(Y));
+        
+        % this is vectorized
+        % but redundant
+        % fullgrid(x,y) = find(winner_take_all(1-interpolation(x*ymax-ymax+y,:)*kohonen)*grossberg==max(winner_take_all(1-interpolation(x*ymax-ymax+y,:)*kohonen)*grossberg));
+        % better
+        B = winner_take_all(1-interpolation(x*ymax-ymax+y,:)*kohonen)*grossberg;
+        fullgrid(x,y) = find(B==max(B));
     end
 end
+
+% i am very aware that this is missing a row when using flat
+% shading
+% but I don't feel like fighting with matlab
+figure(116);
+pcolor(fullgrid);
+shading flat;
+colorbar;
 
 end

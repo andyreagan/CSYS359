@@ -1,4 +1,4 @@
-function [] = test_counterprop_andy(A,B,W)
+function [] = test_bam_andy(A,B,W)
 % bidirectional associative memory (BAM) network
 % aka heteroassociative
 % accepts an input vector (hard coded here) on set of
