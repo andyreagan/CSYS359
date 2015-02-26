@@ -1,4 +1,4 @@
-function [fullgrid] = test_counterprop_andy(kohonen,grossberg,interpolation,training)
+function [fullgrid] = test_counterprop_andy(kohonen,grossberg,interpolation,training,training_raw,f,plottraining)
 % something something something
     
 % define the full grid to test    
@@ -31,7 +31,7 @@ for x=1:xmax
         % but redundant
         % fullgrid(x,y) = find(winner_take_all(1-interpolation(x*ymax-ymax+y,:)*kohonen)*grossberg==max(winner_take_all(1-interpolation(x*ymax-ymax+y,:)*kohonen)*grossberg));
         % better
-        B = winner_take_all(1-interpolation(x*ymax-ymax+y,:)*kohonen)*grossberg;
+        B = winner_take_all(interpolation(x*ymax-ymax+y,:)*kohonen)*grossberg;
         fullgrid(x,y) = find(B==max(B));
     end
 end
@@ -43,5 +43,13 @@ figure(116);
 pcolor(fullgrid);
 shading flat;
 colorbar;
+if plottraining
+    hold on;
+    for i=1:length(training_raw)
+        plot(training_raw(i,1),training_raw(i,2),'s');
+    end
+end
+saveas(116,f);
+
 
 end

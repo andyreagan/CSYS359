@@ -1,4 +1,4 @@
-function [W,V,rmse_all] = train_counterprop_andy(A,B,numiter,randorder)
+function [W,V,rmse_all] = train_counterprop_andy(A,B,numiter,randorder,scaling_fun,traintogether,nearest_neighbor)
 % train the two counterprop matrices
 %
 % INPUTS
@@ -19,10 +19,6 @@ function [W,V,rmse_all] = train_counterprop_andy(A,B,numiter,randorder)
 alpha = 0.7; % kohonen
 beta = 0.2; % grossberg
 
-% whether to train them at the same time
-% assume for now that they are trained for the same amt of time
-traintogether = false;
-nearest_neighbor = false;
 
 num_training_patterns = length(A(:,1));
 
@@ -62,17 +58,20 @@ if ~nearest_neighbor
             % the minumim distance between input and kohonen layer
             % weights...
             % this just applies the weights forward:
-            % I = A(j,:)*W;
+            I = A(j,:)*W;
             % and this is more akin the distance
             % (1x3)*(3x78) = (1x78)
-            I = 1-A(j,:)*W;
+            % I = 1-A(j,:)*W;
             % NOTE: these are the "z_j" in the psuedocode
             
             % find the index of min
             % if we didn't take 1-... in the above, could take the max:
-            % winning_node = find(I==max(I));
+            winning_node = find(I==max(I),1);
             % this variable is akin to "c" in the code
-            winning_node = find(I==min(I),1);
+            % winning_node = find(I==min(I),1);
+            
+            % update this just to look at in debugging
+            % I = I>=max(I);
             
             % disp(I);
             % disp(winning_node);
@@ -84,8 +83,7 @@ if ~nearest_neighbor
             % disp(A(j,:)');
             % fprintf('winning row');
             % disp(W(:,winning_node));
-            W(:,winning_node) = W(:,winning_node) + alpha^(i)*(A(j,:)'-W(:, ...
-                                                              winning_node));
+            W(:,winning_node) = W(:,winning_node) + scaling_fun(alpha,i)*(A(j,:)'-W(:,winning_node));
             % fprintf('winning row after');
             % disp(W(:,winning_node));
             
@@ -95,8 +93,9 @@ if ~nearest_neighbor
             if traintogether
                 % save the error in the output
                 output_error = B(j,:)-V(winning_node,:);
+                
                 rmse_all(j,i) = rmse(B(j,:),V(winning_node,:));
-                V(winning_node,:) = V(winning_node,:) + beta^(i)*(output_error);
+                V(winning_node,:) = V(winning_node,:) + scaling_fun(beta,i)*(output_error);
             end
         end
         % rmse_avg(1,i) = mean(rmse_all(:,i));
@@ -117,7 +116,7 @@ if ~traintogether || nearest_neighbor
             winning_node = find(I==min(I),1);
             output_error = B(j,:)-V(winning_node,:);
             rmse_all(j,i) = rmse(B(j,:),V(winning_node,:));
-            V(winning_node,:) = V(winning_node,:) + beta^(i)*(output_error);
+            V(winning_node,:) = V(winning_node,:) + scaling_fun(beta,i)*(output_error);
         end
     end 
 end

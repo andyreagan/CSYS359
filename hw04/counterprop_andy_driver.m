@@ -1,5 +1,5 @@
-clear all
-close all
+% clear all
+% close all
 
 % load the data
 training = csvread('CounterProp_Data.csv');
@@ -34,12 +34,13 @@ disp(sum(training_norm(1,:).^2));
 fprintf('length of first row of interpolation is (should be 1): \n');
 disp(sum(interpolation_norm(1,:).^2));
 
-numiter = 100;
+numiter = 50;
 % my algorithm breaks down for too many iterations....
 % if I put 50, it sometimes works and sometimes doesn't
+% fixed! had to use find(...,1)
 
 % train the weight matrices
-[W,V,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0);
+[~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0,@scaling_none,true,false);
 % again, tell me what happened
 % disp(size(V));
 % disp(size(W));
@@ -58,7 +59,7 @@ xlabel('iteration')
 ylabel('RMSE over each training data')
 saveas(112,'112.png')
 
-[W,V,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,1);
+[W,V,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,1,@scaling_none,true,false);
 
 figure(113)
 plot(1:numiter,mean(errors_all,1))
@@ -83,31 +84,112 @@ saveas(114,'114.png')
 numtrials = 10;
 errors_randomVstraight = zeros(2,numiter);
 for i=1:numtrials
-    [W,V,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0);
+    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0,@scaling_none,true,false);
     errors_randomVstraight(1,:) = mean(errors_all,1);
-    [W,V,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0);
+    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0,@scaling_none,true,false);
     errors_randomVstraight(2,:) = mean(errors_all,1);
 end
+
 errors_randomVstraight = errors_randomVstraight./numtrials;
 
 figure(115)
 plot(1:numiter,errors_randomVstraight)
-title('counterprop convergence, 20 trials')
+title('counterprop convergence, 100 trials')
 xlabel('iteration')
 ylabel('RMSE over each training data')
 legend('straight','random')
 saveas(115,'115.png')
 
-numiter = 100;
+numiter = 10;
 
 % test it now
 % train one with random order
-order = true;
-[kohonen_weights,grossberg_weights,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,order);
+randorder = true;
+[kohonen_weights,grossberg_weights,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,true,false);
 
-interp = test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm);
+test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm,training,'116-standard.png',false);
+test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm,training,'116-wpoints.png',true);
 
+% now lets try to look at convergence with exponential scaling
+numiter = 50;
+errors_exp = zeros(2,numiter);
+for i=1:numtrials
+    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_none,true,false);
+    errors_exp(1,:) = mean(errors_all,1);
+    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_exponential,true,false);
+    errors_exp(2,:) = mean(errors_all,1);
+end
 
+errors_exp = errors_exp./numtrials;
+
+figure(117)
+plot(1:numiter,errors_exp)
+title('counterprop convergence, 100 trials')
+xlabel('iteration')
+ylabel('RMSE over each training data')
+legend('no scaling','exponential scaling')
+saveas(117,'117.png')
+
+% now lets try to look at convergence separately vs together
+errors_exp = zeros(2,numiter);
+for i=1:numtrials
+    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_none,true,false);
+    errors_exp(1,:) = mean(errors_all,1);
+    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_exponential,false,false);
+    errors_exp(2,:) = mean(errors_all,1);
+end
+
+errors_exp = errors_exp./numtrials;
+
+figure(118)
+plot(1:numiter,errors_exp)
+title('counterprop convergence, 100 trials')
+xlabel('iteration')
+ylabel('RMSE over each training data')
+legend('together','separate')
+saveas(118,'118.png')
+
+% now lets try to look at convergence w nearest neighbor
+numiter = 50;
+errors_exp = zeros(2,numiter);
+for i=1:numtrials
+    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_none,false,true);
+    errors_exp(1,:) = mean(errors_all,1);
+    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_exponential,false,true);
+    errors_exp(2,:) = mean(errors_all,1);
+end
+
+errors_exp = errors_exp./numtrials;
+
+figure(119)
+plot(1:numiter,errors_exp)
+title('counterprop convergence, 100 trials')
+xlabel('iteration')
+ylabel('RMSE over each training data')
+legend('normal','nearest neighbor')
+saveas(119,'119.png')
+
+% test randomorder on the 2D space
+numiter = 50;
+% i'm not sure averaging over weights makes any real sense
+% averaging over convergence does, but not weights
+numtrials = 1;
+% for i=1:numtrials
+randorder = true;
+[kohonen_weightsr,grossberg_weightsr,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,true,false);
+randorder = false;
+[kohonen_weights,grossberg_weights,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,true,false);
+% end
+test_counterprop_andy(kohonen_weightsr,grossberg_weightsr,interpolation_norm,training_norm,training,'interpolation-randorder.png',false);
+test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm,training,'interpolation-straigtorder.png',true);
+
+% test nearest neighbor in 2d
+numiter = 50;
+randorder = false;
+[kohonen_weightsr,grossberg_weightsr,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,false,false);
+[kohonen_weights,grossberg_weights,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,false,true);
+test_counterprop_andy(kohonen_weightsr,grossberg_weightsr,interpolation_norm,training_norm,training,'interpolation-random.png',false);
+test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm,training,'interpolation-nearestn.png',true);
 
 
 
