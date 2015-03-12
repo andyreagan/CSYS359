@@ -1,0 +1,20 @@
+\begin{thebibliography}{}
+
+\bibitem[\protect\citeauthoryear{Hecht-Nielsen}{Hecht-Nielsen}{1987}]{hecht1987counterpropagation}
+Hecht-Nielsen, R. (1987).
+\newblock Counterpropagation networks.
+\newblock {\em Applied optics\/}~{\em 26\/}(23), 4979--4983.
+
+\bibitem[\protect\citeauthoryear{Hecht-Nielsen}{Hecht-Nielsen}{1988}]{hecht1988applications}
+Hecht-Nielsen, R. (1988).
+\newblock Applications of counterpropagation networks.
+\newblock {\em Neural networks\/}~{\em 1\/}(2), 131--139.
+
+\bibitem[\protect\citeauthoryear{Rizzo and Dougherty}{Rizzo and
+  Dougherty}{1994}]{rizzo1994characterization}
+Rizzo, D.~M. and D.~E. Dougherty (1994).
+\newblock Characterization of aquifer properties using artificial neural
+  networks: neural kriging.
+\newblock {\em Water Resources Research\/}~{\em 30\/}(2), 483--497.
+
+\end{thebibliography}

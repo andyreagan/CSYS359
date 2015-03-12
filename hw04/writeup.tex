@@ -1,4 +1,5 @@
-\documentclass{article}
+%% \documentclass[twocolumn]{article}
+\documentclass[pre,twocolumn,twoside,byrevtex,superscriptaddress]{revtex4}
 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -27,68 +28,165 @@
 
 \begin{document}
 
-\title{\vspace{-2cm}Homework 3: Bidirectional Associative Memory}
+%% \twocolumn[
+%%   \begin{@twocolumnfalse} 
+
+%%     \title{\vspace{-2cm}Homework 4: Counterprop}
+%%     \author{Andy Reagan}
+
+%%     \maketitle
+
+%%   \end{@twocolumnfalse}
+%% ]
+
+\title{\vspace{-2cm}Homework 4: Counterprop}
 \author{Andy Reagan}
+
+\begin{abstract}
+A basic version of the counterpropogation algorithm is coded up, and put through some simple tests.
+I find that it performs best when training with Kohonen and Grossberg layers simulanteously, when the learned parameters are not scaled, and when run from random initial weights (as opposed to nearest neighbor).
+\end{abstract}
 
 \maketitle
 
-\section{Discussion}
 
-From exploring what BAM looks like from the state space, I've found that BAM, when stable, can only map memories to another node and then back to the start.
-Also, starting at the other node, you have to get mapped back to memory that was stored on the other side, for it to be stable.
-Otherwise there is no way for the weight matrix $W$ to encode the desired memories.
 
-I'm still trying to make sense of how the weight matrix $W$ is set, but I've gotten this far: recalling the memory $B_1$ associated with $A_1$ goes like
-\[ B_1 = f(A_1 W) = f(A_1 (A_1^TB_1 + \cdot A_n^TB_n)) = f(P_{A_1} B_1 + \cdot P_{A_1A_n}B_n) \]
-where the $P_A$ is the projection matrix that projects $B$ on the basis of $A$.
-The projection matrix for orthogonal vectors is 0, and the projection matrix of $A$ onto $A$ is the identity, so this will lead to perfect recall if the memories to be stored are indeed a basis of the vector space for their associations.
 
-%% \begin{align*} 0 = -\frac{\epsilon}{h^2} + \frac{hf'''(x)}{3}\end{align*}
 
-\section{Visualization}
+\section{Introduction}
 
-I coded up the network in Javascript and made a force layout of the states of the network, drawing links as you move through the network.
-I can show you (the class) a demo of it running, it's pretty fun.
-The javascript code is attached, it also relies on a css and an html file which I didn't include.
+The original version of the counterpropogation algorithm was originally proposed by Neilson in 1988 \cite{hecht1987counterpropagation} with a later paper describing the applications \cite{hecht1988applications}.
+Here I code up a version using the psuedocode from Rizzo and Doughtery's application to characterizing aquifer properties \cite{rizzo1994characterization}.
 
-Check it out live here: \url{http://andyreagan.github.io/demos/2015-02AANN/BAM.html}.
+The main idea of counterpropogation is a combination of the classification power of Kohonen's map, with the interpolation ability of a Grossberg net.
+Claimed advantages of counterpropogation are higher speed than backpropogation, and the ability to better recognize patterns.
 
-Starting at any given state in the network, the green dashed lines follow $W^T$, and the grey lines follow $W$.
-It is sometimes tricky, but if you look closely it is always unambiguous how states are updated using these maps.
+As I have found to be the case with coding the nueral networks, there are many parameters and choices that are left up to the programmer.
+In the next section we explore a few, namely: order of presentation of training data, effect of training the layers together or separate, on scaling the learning coefficients, and on initializing the weights.
 
-Here are a couple screen shots from it:
-
-\begin{figure}[h!]
+\begin{figure}[h]
  \centering
-  \includegraphics[width=0.69\textwidth]{network1.png}
-  \label{fig:1}
-  \caption{The network for the memories given in class.}
+  \includegraphics[width=0.48\textwidth]{115.png}
+  \label{fig:5}
+  \caption{Direct comparison over 100 trials of the convergence when presenting training data in a random or repeated order.}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[h]
  \centering
-  \includegraphics[width=0.79\textwidth]{network2.png}
-  \label{fig:2}
-  \caption{The network for the memories given in class, with a slight change so that the two memories are not symmetric. More interesting!}
+  \includegraphics[width=0.48\textwidth]{116-wpoints.png}
+  \label{fig:10}
+  \caption{Classification of full data (interpolation phase), with points at where the training data were.}
 \end{figure}
 
-\begin{figure}[h!]
+\section{Methods}
+
+I code the network in MATLAB, again following the psuedocode from Rizzo and Doughtery \cite{rizzo1994characterization}.
+Specific choices of parameters are investigated further.
+
+I set the number of Kohonen nuerons to be 3 greater than the size of the training data when not using the network as a nearest-neighbor classifier.
+This is such that the Kohonen vectors can be useful in a nearest-neighbor classification fashion, but without prior assumptions about the distributions of the given observations.
+Another interesting thing to try would be to explicitly remove the Kohonen nodes whose input weights go to zero, and therefore use the Kohonen layer to reduce the data into clusters.
+I don't expect that removing these nodes would have any effect, but it would be good to check.
+
+
+\section{Results}
+
+First, the main challenge of getting the network to run, and converge, was successful.
+Both operating from a random initial condition on the weights on and on a preset nearest neighbor condition, we are able to make spatially reasonable predictions for the training data.
+
+As an interpolater, the Grossberg layer classifies the ``fuzzy'' output of the Kohonen layer as a winner-takes-all, and this seems like a reasonable and simple way to classify this output.
+
+I find that despite my expectations, the best convergence is achieved without scaling parameters.
+The best performance is also achieved while training together, and agian best performance is achieved on initializing the weights randomly, and letting the Kohonen layer do it's thing.
+Intiutively, as a spatial classifier, I really like counterpropogation.
+
+Each of the following figures is the result of a test of each of these over 100 trials.
+I apologize for the tiny font size, MATLAB default.
+
+
+\begin{figure}[h]
  \centering
-  \includegraphics[width=0.79\textwidth]{network3.png}
-  \label{fig:2}
-  \caption{A bigger network having some trouble remembering things. Maybe I coded it wrong...}
+  \includegraphics[width=0.48\textwidth]{117.png}
+  \label{fig:7}
+  \caption{Convergence with different scalings of learning parameters.}
+\end{figure}
+
+\begin{figure}[h]
+ \centering
+  \includegraphics[width=0.48\textwidth]{118.png}
+  \label{fig:8}
+  \caption{Covergence training together and separate.}
+\end{figure}
+
+\begin{figure}[h]
+ \centering
+  \includegraphics[width=0.48\textwidth]{119.png}
+  \label{fig:9}
+  \caption{Covergence with different Kohonen layer weight initializations.}
 \end{figure}
 
 \clearpage
 \pagebreak
 
-\section*{Full code}
+\bibliographystyle{chicago}
+\bibliography{writeup}
 
-\lstinputlisting[]{bam_andy_driver.m}
+\clearpage
+\pagebreak
+\onecolumngrid
+
+    \section*{Full code}
+
+    \lstinputlisting{counterprop_andy_driver.m}
+
+    \lstinputlisting{nomalize_input_andy.m}
+
+    \lstinputlisting{train_counterprop_andy.m}
+
+    \lstinputlisting{test_counterprop_andy.m}
+
+    \lstinputlisting{scaling_exponential.m}
+
+    \lstinputlisting{scaling_none.m}
 
 \clearpage
 \pagebreak
 
-\lstinputlisting[language=Java]{js/bam.js}
+    \section*{Extra figures}
+
+    \begin{figure}
+      \centering
+      \includegraphics[width=0.68\textwidth]{111.png}
+      \label{fig:1}
+      \caption{Basic convergence test.}
+    \end{figure}
+
+    \begin{figure}
+      \centering
+      \includegraphics[width=0.68\textwidth]{112.png}
+      \label{fig:2}
+      \caption{Convergence on each of the individual training data.}
+    \end{figure}
+
+    \begin{figure}
+      \centering
+      \includegraphics[width=0.68\textwidth]{113.png}
+      \label{fig:3}
+      \caption{Randomized order of presentation of the training data.}
+    \end{figure}
+
+    \begin{figure}
+      \centering
+      \includegraphics[width=0.68\textwidth]{114.png}
+      \label{fig:4}
+      \caption{Randomized order of presentation of the training data, and convergence on each of the training data.}
+    \end{figure}
+
+    \begin{figure}
+      \centering
+      \includegraphics[width=0.68\textwidth]{116-standard.png}
+      \label{fig:6}
+      \caption{Classification of full data (interpolation phase).}
+    \end{figure}
 
 \end{document}
