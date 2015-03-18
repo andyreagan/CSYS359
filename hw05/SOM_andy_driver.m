@@ -1,195 +1,113 @@
 % clear all
 % close all
 
-% load the data
-training = csvread('CounterProp_Data.csv');
+% load the data, into the variable X
+load AnimalData.mat
+A = X';
 
-num_output_categories = max(training(:,end));
-output_data = zeros(length(training(:,1)),num_output_categories);
-for i=1:length(training(:,1))
-    output_data(i,end+1-training(i,end)) = 1;
-end
-
-% make the interpolation data set
-% looks like the x and y in the training data
-% go close to 200 and 250, respectively
-% so interpolation at every point up to those
-[X,Y] = meshgrid(1:200,1:250);
-interpolation = [X(:),Y(:)];
+% % make the interpolation data set
+% % looks like the x and y in the training data
+% % go close to 200 and 250, respectively
+% % so interpolation at every point up to those
+% [X,Y] = meshgrid(0:.01:1,0:01:1);
+% interpolation = [X(:),Y(:)];
 
 % normalize the data to the unit sphere
-[training_norm,interpolation_norm] = nomalize_input_andy(training(:,1:end-1),interpolation);
+% [training_norm,interpolation_norm] = nomalize_input_andy(training(:,1:end-1),interpolation);
 
-% tell me what happened
-fprintf('size of training is: \n');
-disp(size(training));
-fprintf('size of training_norm is: \n');
-disp(size(training_norm));
-fprintf('first row of training is: \n');
-disp(training(1,:));
-fprintf('first row of training_norm is: \n');
-disp(training_norm(1,:));
-fprintf('length of first row of training is (should be 1): \n');
-disp(sum(training_norm(1,:).^2));
-fprintf('length of first row of interpolation is (should be 1): \n');
-disp(sum(interpolation_norm(1,:).^2));
+numiter = 150;
+randorder = 1;
 
-numiter = 50;
-% my algorithm breaks down for too many iterations....
-% if I put 50, it sometimes works and sometimes doesn't
-% fixed! had to use find(...,1)
+% initialize the kohonen weights
+% these are the m_i
+num_nodes = 49;
+B = rand(length(A(:,1)),num_nodes);
+
+node_network_size = [7,7]; % down x across
+
+% create the adjacency matrix
+C = zeros(num_nodes,num_nodes);
+for i=1:node_network_size(1) % down
+    for j=1:node_network_size(2) % across
+        indices = unique([sub2ind(node_network_size,i,min([node_network_size(2),j+1])),sub2ind(node_network_size,i,max([1,j-1])),sub2ind(node_network_size,max([1,i-1]),j),sub2ind(node_network_size,min([i+1,node_network_size(1)]),j)]);
+        % disp(indices);
+        C(sub2ind(node_network_size,i,j),indices) = 1;
+        C(indices,sub2ind(node_network_size,i,j)) = 1;
+        C(sub2ind(node_network_size,i,j),sub2ind(node_network_size,i,j)) =1;
+    end
+end
 
 % train the weight matrices
-[~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0,@scaling_none,true,false);
-% again, tell me what happened
-% disp(size(V));
-% disp(size(W));
+[B,errors_all] = train_SOM(A,B,C,numiter,randorder,@scaling_inverse,@moore_decaying,0);
 
 figure(111)
-plot(1:numiter,mean(errors_all,1))
-title('convergence of counterprop')
-xlabel('iteration')
-ylabel('avg RMSE over training data')
-saveas(111,'111.png')
-
-figure(112)
-plot(1:numiter,errors_all)
-title('convergence of counterprop')
-xlabel('iteration')
-ylabel('RMSE over each training data')
-saveas(112,'112.png')
-
-[W,V,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,1,@scaling_none,true,false);
-
-figure(113)
-plot(1:numiter,mean(errors_all,1))
-title('convergence of counterprop, random training order')
-xlabel('iteration')
-ylabel('avg RMSE over training data')
-saveas(113,'113.png')
-
-figure(114)
-plot(1:numiter,errors_all)
-title('convergence of counterprop, random training order')
-xlabel('iteration')
-ylabel('RMSE over each training data')
-saveas(114,'114.png')
-
-% looking at a few of these...looks like it flattens out
-% with the random order
-% and the avg RMSE is about the same
-
-% let's do a little bit better, and average over many runs for the
-% RMSE plot
-numtrials = 10;
-errors_randomVstraight = zeros(2,numiter);
-for i=1:numtrials
-    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0,@scaling_none,true,false);
-    errors_randomVstraight(1,:) = mean(errors_all,1);
-    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,0,@scaling_none,true,false);
-    errors_randomVstraight(2,:) = mean(errors_all,1);
+titles = {'dove','hen','duck','goose','owl','hawk','eagle','fox','dog','wolf','cat','tiger','lion','horse','zebra','cow'};
+for i=1:length(A(1,:))
+    min_dist = sqrt(sum((A(:,i)-B(:,1)).^2));
+    winning_node = 1;
+    for k=2:num_nodes
+        dist = sqrt(sum((A(:,i)-B(:,k)).^2));
+        if dist<min_dist
+            min_dist = dist;
+            winning_node = k;
+        end
+    end
+    fprintf('winning node is %f\n',winning_node);
+    [nodei,nodej] = ind2sub(node_network_size,winning_node);
+    text(nodei,nodej,sprintf('%s',titles{i}))
+    hold on;
 end
+xlim([0.5 node_network_size(1)+.5])
+ylim([0.5 node_network_size(2)+.5])
 
-errors_randomVstraight = errors_randomVstraight./numtrials;
+% plot(1:numiter,mean(errors_all,1))
+% title('convergence of SOM')
+% xlabel('iteration')
+% ylabel('avg distance to training data')
+% saveas(111,'figures/convergence of SOM.png')
 
-figure(115)
-plot(1:numiter,errors_randomVstraight)
-title('counterprop convergence, 100 trials')
-xlabel('iteration')
-ylabel('RMSE over each training data')
-legend('straight','random')
-saveas(115,'115.png')
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% here let's do the uniform distribution in 2D
+% reproducing figure 3 of kohonen
+numsamples = 1000;
+A = rand(2,numsamples);
 
 numiter = 10;
+randorder = 1;
 
-% test it now
-% train one with random order
-randorder = true;
-[kohonen_weights,grossberg_weights,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,true,false);
+% initialize the kohonen weights
+% these are the m_i
+num_nodes = 100;
+B = rand(length(A(:,1)),num_nodes);
 
-test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm,training,'116-standard.png',false);
-test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm,training,'116-wpoints.png',true);
+node_network_size = [10,10]; % down x across
 
-% now lets try to look at convergence with exponential scaling
-numiter = 50;
-errors_exp = zeros(2,numiter);
-for i=1:numtrials
-    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_none,true,false);
-    errors_exp(1,:) = mean(errors_all,1);
-    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_exponential,true,false);
-    errors_exp(2,:) = mean(errors_all,1);
+% create the adjacency matrix
+C = zeros(num_nodes,num_nodes);
+for i=1:node_network_size(1) % down
+    for j=1:node_network_size(2) % across
+        indices = unique([sub2ind(node_network_size,i,min([node_network_size(2),j+1])),sub2ind(node_network_size,i,max([1,j-1])),sub2ind(node_network_size,max([1,i-1]),j),sub2ind(node_network_size,min([i+1,node_network_size(1)]),j)]);
+        % disp(indices);
+        C(sub2ind(node_network_size,i,j),indices) = 1;
+        C(indices,sub2ind(node_network_size,i,j)) = 1;
+        C(sub2ind(node_network_size,i,j),sub2ind(node_network_size,i,j)) =1;
+    end
 end
 
-errors_exp = errors_exp./numtrials;
+iterations = [0,20,100,1000,5000,10000];
+iterations = [0,10,20,30,40,50];
 
-figure(117)
-plot(1:numiter,errors_exp)
-title('counterprop convergence, 100 trials')
-xlabel('iteration')
-ylabel('RMSE over each training data')
-legend('no scaling','exponential scaling')
-saveas(117,'117.png')
+figure(112);
 
-% now lets try to look at convergence separately vs together
-errors_exp = zeros(2,numiter);
-for i=1:numtrials
-    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_none,true,false);
-    errors_exp(1,:) = mean(errors_all,1);
-    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_exponential,false,false);
-    errors_exp(2,:) = mean(errors_all,1);
-end
+i=1;
+subplot(2,3,i);
+plot(B(1,:),B(2,:),'s');
+title(sprintf('%.0f iterations',iterations(i)))
 
-errors_exp = errors_exp./numtrials;
-
-figure(118)
-plot(1:numiter,errors_exp)
-title('counterprop convergence, 100 trials')
-xlabel('iteration')
-ylabel('RMSE over each training data')
-legend('together','separate')
-saveas(118,'118.png')
-
-% now lets try to look at convergence w nearest neighbor
-numiter = 50;
-errors_exp = zeros(2,numiter);
-for i=1:numtrials
-    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_none,false,true);
-    errors_exp(1,:) = mean(errors_all,1);
-    [~,~,errors_all] = train_counterprop_andy(training_norm,output_data,numiter,false,@scaling_exponential,false,true);
-    errors_exp(2,:) = mean(errors_all,1);
-end
-
-errors_exp = errors_exp./numtrials;
-
-figure(119)
-plot(1:numiter,errors_exp)
-title('counterprop convergence, 100 trials')
-xlabel('iteration')
-ylabel('RMSE over each training data')
-legend('normal','nearest neighbor')
-saveas(119,'119.png')
-
-% test randomorder on the 2D space
-numiter = 50;
-% i'm not sure averaging over weights makes any real sense
-% averaging over convergence does, but not weights
-numtrials = 1;
-% for i=1:numtrials
-randorder = true;
-[kohonen_weightsr,grossberg_weightsr,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,true,false);
-randorder = false;
-[kohonen_weights,grossberg_weights,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,true,false);
+% % train the weight matrices
+% for i=2:length(iterations)
+%     [B,errors_all] = train_SOM(A,B,C,iterations(i)-iterations(i-1),randorder,@scaling_inverse,@moore_decaying,iterations(i-1));
+%     subplot(2,3,i);
+%     plot(B(1,:),B(2,:),'s');
+%     title(sprintf('%f iterations',iterations(i)))
 % end
-test_counterprop_andy(kohonen_weightsr,grossberg_weightsr,interpolation_norm,training_norm,training,'interpolation-randorder.png',false);
-test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm,training,'interpolation-straigtorder.png',true);
-
-% test nearest neighbor in 2d
-numiter = 50;
-randorder = false;
-[kohonen_weightsr,grossberg_weightsr,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,false,false);
-[kohonen_weights,grossberg_weights,~] = train_counterprop_andy(training_norm,output_data,numiter,randorder,@scaling_none,false,true);
-test_counterprop_andy(kohonen_weightsr,grossberg_weightsr,interpolation_norm,training_norm,training,'interpolation-random.png',false);
-test_counterprop_andy(kohonen_weights,grossberg_weights,interpolation_norm,training_norm,training,'interpolation-nearestn.png',true);
-
-
-
