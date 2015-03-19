@@ -64,12 +64,12 @@ ylim([0.5 node_network_size(2)+.5])
 % title('convergence of SOM')
 % xlabel('iteration')
 % ylabel('avg distance to training data')
-% saveas(111,'figures/convergence of SOM.png')
+saveas(111,'figures/animals-layout-corrected.png')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % here let's do the uniform distribution in 2D
 % reproducing figure 3 of kohonen
-numsamples = 1000;
+numsamples = 100;
 A = rand(2,numsamples);
 
 numiter = 10;
@@ -77,10 +77,10 @@ randorder = 1;
 
 % initialize the kohonen weights
 % these are the m_i
-num_nodes = 100;
+num_nodes = 25;
 B = rand(length(A(:,1)),num_nodes);
 
-node_network_size = [10,10]; % down x across
+node_network_size = [5,5]; % down x across
 
 % create the adjacency matrix
 C = zeros(num_nodes,num_nodes);
@@ -95,7 +95,7 @@ for i=1:node_network_size(1) % down
 end
 
 iterations = [0,20,100,1000,5000,10000];
-iterations = [0,10,20,30,40,50];
+% iterations = [0,10,20,30,40,50];
 
 figure(112);
 
@@ -104,10 +104,12 @@ subplot(2,3,i);
 plot(B(1,:),B(2,:),'s');
 title(sprintf('%.0f iterations',iterations(i)))
 
-% % train the weight matrices
-% for i=2:length(iterations)
-%     [B,errors_all] = train_SOM(A,B,C,iterations(i)-iterations(i-1),randorder,@scaling_inverse,@moore_decaying,iterations(i-1));
-%     subplot(2,3,i);
-%     plot(B(1,:),B(2,:),'s');
-%     title(sprintf('%f iterations',iterations(i)))
-% end
+% train the weight matrices
+for i=2:length(iterations)
+    [B,errors_all] = train_SOM(A,B,C,iterations(i)-iterations(i-1),randorder,@scaling_inverse,@moore_decaying,iterations(i-1));
+    subplot(2,3,i);
+    plot(B(1,:),B(2,:),'s');
+    title(sprintf('%.0f iterations',iterations(i)))
+end
+
+saveas(112,'figures/SOM_uniform_dist_covering_long_corrected.png')

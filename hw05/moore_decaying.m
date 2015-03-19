@@ -23,12 +23,13 @@ for j=2:plen
     for k=1:l
         if ~isempty(find(C(:,indices(k))==1, 1))
             % disp(find(C(:,indices(k))==1));
-            indices = [indices;find(C(:,indices(k))==1)];
+            % indices = [indices;find(C(:,indices(k))==1)];
+            indices = unique([indices;find(C(:,indices(k))==1)]);
         end
     end
 end
 
-indices = unique(indices);
+% indices = unique(indices);
 
 % don't scale them...
 coeff = ones(size(indices));
