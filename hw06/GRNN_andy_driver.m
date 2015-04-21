@@ -1,115 +1,252 @@
-% clear all
-% close all
+clear all
+close all
 
-% load the data, into the variable X
-load AnimalData.mat
-A = X';
+fprintf('time for GRNN\n');
 
-% % make the interpolation data set
-% % looks like the x and y in the training data
-% % go close to 200 and 250, respectively
-% % so interpolation at every point up to those
-% [X,Y] = meshgrid(0:.01:1,0:01:1);
-% interpolation = [X(:),Y(:)];
+% [X,Y] = makeTrainingData;
 
-% normalize the data to the unit sphere
-% [training_norm,interpolation_norm] = nomalize_input_andy(training(:,1:end-1),interpolation);
+% disp(size(X));
+% disp(size(Y));
+% num_patterns = size(X,1);
 
-numiter = 150;
-randorder = 1;
+% % figure(111);
+% % plot(X(:,1),Y)
+% % saveas(111,'figures/training_output.png')
 
-% initialize the kohonen weights
-% these are the m_i
-num_nodes = 49;
-B = rand(length(A(:,1)),num_nodes);
+% % no training, but let's set the weight matrices explicitly
+% % first layer:
+% P = X';
+% % that was easy...
+% % second layer (summation units):
+% num_A_units = size(Y,2);
+% num_B_units = size(Y,2);
+% S = Y';
 
-node_network_size = [7,7]; % down x across
+% % ...that's it!
 
-% create the adjacency matrix
-C = zeros(num_nodes,num_nodes);
-for i=1:node_network_size(1) % down
-    for j=1:node_network_size(2) % across
-        indices = unique([sub2ind(node_network_size,i,min([node_network_size(2),j+1])),sub2ind(node_network_size,i,max([1,j-1])),sub2ind(node_network_size,max([1,i-1]),j),sub2ind(node_network_size,min([i+1,node_network_size(1)]),j)]);
-        % disp(indices);
-        C(sub2ind(node_network_size,i,j),indices) = 1;
-        C(indices,sub2ind(node_network_size,i,j)) = 1;
-        C(sub2ind(node_network_size,i,j),sub2ind(node_network_size,i,j)) =1;
+% % now let's test it with an input
+% x = [2,2.7];
+
+% sigma = 0.5;
+
+% % in a couple steps...
+% % pattern_output = sigmf(sum(abs(P-repmat(x,num_patterns,1)'),1),[10 0.5]);
+% pattern_output = exp(-sum(abs(P-repmat(x,num_patterns,1)'),1)./(2*sigma^2));
+% summation_a_units = pattern_output*S';
+% summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+% output = summation_a_units/summation_b_units;
+
+% figure(112)
+% plot(X(:,1),Y,'b')
+% hold on;
+% plot(x(1),output,'bs')
+% plot(X(:,2),Y,'r')
+% plot(x(2),output,'rs')
+% xlabel('x_1,x_2','FontSize',12)
+% ylabel('y','FontSize',12)
+% legend('y over x_1','GRNN output over x_1','y over x_2','GRNN output over x_2','FontSize',12)
+% saveas(112,'figures/GRNN.png')
+
+% allx = 0:.1:10
+% output = zeros(size(allx))
+% for i=1:length(allx)
+%     x = [allx(i),allx(i)];
+%     pattern_output = exp(-sum(abs(P-repmat(x,num_patterns,1)'),1)./(2*sigma^2));
+%     summation_a_units = pattern_output*S';
+%     summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+%     output(i) = summation_a_units/summation_b_units;
+% end
+
+% figure(113)
+% plot(allx,output,'b')
+% hold on;
+% plot(allx,f(allx)+f(allx+1),'r')
+% xlabel('x_1','FontSize',12)
+% ylabel('y','FontSize',12)
+% legend('GRNN output over x_1','hidden function')
+% saveas(113,'figures/GRNN-allx.png')
+
+raw = csvread('TrainData.csv');
+X = raw(:,1);
+% make an exact Y that I can test against!
+Y = sigmf(X,[2,0])*2-1;
+% Y = raw(:,2);
+num_patterns = size(X,1);
+
+% first layer:
+P = X'./max(X); % and scale it to [0,1]
+% second layer (summation units):
+num_A_units = size(Y,2);
+num_B_units = size(Y,2);
+S = Y';
+
+% sigma = 0.5;
+% predict = csvread('PredictData.csv');
+
+% output = zeros(size(predict))
+% for i=1:length(predict)
+%     x = predict(i)/max(X);
+%     pattern_output = exp(-sum(abs(P-repmat(x,num_patterns,1)'),1)./(2*sigma^2));
+%     summation_a_units = pattern_output*S';
+%     summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+%     output(i) = summation_a_units/summation_b_units;
+% end
+
+% figure(114)
+% plot(X,Y,'b')
+% hold on;
+% plot(predict,output,'rs')
+% xlabel('x','FontSize',12)
+% ylabel('y','FontSize',12)
+% legend('training data','predictions \sigma = 0.5')
+% saveas(114,'figures/GRNN-givenData.png')
+
+% sigmas = 0.1:0.1:0.9;
+% % sigmas = 0.01:.01:0.1;
+% predict = csvread('PredictData.csv');
+
+% output = zeros(size(predict,1),length(sigmas));
+% for j=1:length(sigmas)
+%     sigma = sigmas(j);
+%     for i=1:length(predict)
+%         x = predict(i)/max(X);
+%         pattern_output = exp(-sum(abs(P-repmat(x,num_patterns,1)'),1)./(2*sigma^2));
+%         summation_a_units = pattern_output*S';
+%         summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+%         output(j,i) = summation_a_units/summation_b_units;
+%     end
+% end
+
+% figure(115)
+% plot(X,Y,'b')
+% hold on;
+% for j=1:length(sigmas)
+%     plot(predict,output(j,:),'rs-')
+% end
+% % plot(predict,output,'s-')
+% xlabel('x','FontSize',12)
+% ylabel('y','FontSize',12)
+% legend('training data','predictions \sigma=0.1',['predictions ' ...
+%                     '\sigma=0.2'],'predictions \sigma=0.3','...')
+% saveas(115,'figures/GRNN-givenData-allsigma.png')
+
+% output = zeros(size(predict))
+% for i=1:length(predict)
+%     x = predict(i)/max(X);
+%     pattern_output = exp(-sum((P-repmat(x,num_patterns,1)').^2,1)./(2*sigma^2));
+%     summation_a_units = pattern_output*S';
+%     summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+%     output(i) = summation_a_units/summation_b_units;
+% end
+
+% figure(116)
+% plot(X,Y,'b')
+% hold on;
+% plot(predict,output,'rs')
+% xlabel('x','FontSize',12)
+% ylabel('y','FontSize',12)
+% legend('training data','predictions')
+% saveas(116,'figures/GRNN-givenData-sqdiff.png')
+
+% sigmas = 0.1:0.1:0.9;
+% predict = csvread('PredictData.csv');
+
+% output = zeros(size(predict,1),length(sigmas));
+% for j=1:length(sigmas)
+%     sigma = sigmas(j);
+%     for i=1:length(predict)
+%         x = predict(i)/max(X);
+%         pattern_output = exp(-sum((P-repmat(x,num_patterns,1)').^2,1)./(2*sigma^2));
+%         summation_a_units = pattern_output*S';
+%         summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+%         output(j,i) = summation_a_units/summation_b_units;
+%     end
+% end
+
+% figure(117)
+% plot(X,Y,'b')
+% hold on;
+% for j=1:length(sigmas)
+%     plot(predict,output(j,:),'rs-')
+% end
+% xlabel('x','FontSize',12)
+% ylabel('y','FontSize',12)
+% legend('training data','predictions \sigma=0.1',['predictions ' ...
+%                     '\sigma=0.2'],'predictions \sigma=0.3','...')
+% saveas(117,'figures/GRNN-givenData-allsigma-sqdiff.png')
+
+% exact = Y(1:5:21)';
+
+% sigmas = 0.001:0.001:0.01;
+% output = zeros(length(sigmas),size(predict,1));
+% for j=1:length(sigmas)
+%     sigma = sigmas(j);
+%     for i=1:length(predict)
+%         x = predict(i)/max(X);
+%         pattern_output = exp(-sum((P-repmat(x,num_patterns,1)').^2,1)./(2*sigma^2));
+%         summation_a_units = pattern_output*S';
+%         summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+%         output(j,i) = summation_a_units/summation_b_units;
+%     end
+% end
+
+% figure(118)
+% errors = zeros(size(sigmas));
+% for j=1:length(sigmas)
+%     errors(j) = rmse(output(j,1:2:9),exact);
+% end
+% plot(sigmas,errors)
+% xlabel('\sigma','FontSize',12)
+% ylabel('RMSE','FontSize',12)
+% legend('training data','predictions \sigma=0.1',['predictions ' ...
+%                     '\sigma=0.2'],'predictions \sigma=0.3','...')
+% saveas(118,'figures/GRNN-givenData-allsigma-sqdiff-RMSE.png')
+
+% prevoutput = output;
+
+% sigma = 0.001;
+% allx = 0:.01:2.5
+% output = zeros(size(allx))
+% for i=1:length(allx)
+%     x = allx(i)/max(X);
+%     pattern_output = exp(-sum((P-repmat(x,num_patterns,1)').^2,1)./(2*sigma^2));
+%     summation_a_units = pattern_output*S';
+%     summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+%     output(i) = summation_a_units/summation_b_units;
+% end 
+
+% figure(119)
+% plot(X,Y,'b')
+% hold on;
+% plot(allx,output,'r-')
+% plot(predict,prevoutput(1,:),'rs')
+% xlabel('x','FontSize',12)
+% ylabel('y','FontSize',12)
+% legend('training data','predictions \sigma=0.001')
+% saveas(119,'figures/GRNN-givenData-sigma0.001-sqdiff.png')
+
+predict = 0:0.01:2.5;
+exact = sigmf(predict,[2,0])*2-1;
+sigmas = 0.01:0.001:0.1;
+output = zeros(length(sigmas),size(predict,1));
+for j=1:length(sigmas)
+    sigma = sigmas(j);
+    for i=1:length(predict)
+        x = predict(i)/max(X);
+        pattern_output = exp(-sum((P-repmat(x,num_patterns,1)').^2,1)./(2*sigma^2));
+        summation_a_units = pattern_output*S';
+        summation_b_units = pattern_output*ones(num_patterns,num_B_units);
+        output(j,i) = summation_a_units/summation_b_units;
     end
 end
 
-% train the weight matrices
-[B,errors_all] = train_SOM(A,B,C,numiter,randorder,@scaling_inverse,@moore_decaying,0);
-
-figure(111)
-titles = {'dove','hen','duck','goose','owl','hawk','eagle','fox','dog','wolf','cat','tiger','lion','horse','zebra','cow'};
-for i=1:length(A(1,:))
-    min_dist = sqrt(sum((A(:,i)-B(:,1)).^2));
-    winning_node = 1;
-    for k=2:num_nodes
-        dist = sqrt(sum((A(:,i)-B(:,k)).^2));
-        if dist<min_dist
-            min_dist = dist;
-            winning_node = k;
-        end
-    end
-    fprintf('winning node is %f\n',winning_node);
-    [nodei,nodej] = ind2sub(node_network_size,winning_node);
-    text(nodei,nodej,sprintf('%s',titles{i}))
-    hold on;
-end
-xlim([0.5 node_network_size(1)+.5])
-ylim([0.5 node_network_size(2)+.5])
-
-% plot(1:numiter,mean(errors_all,1))
-% title('convergence of SOM')
-% xlabel('iteration')
-% ylabel('avg distance to training data')
-saveas(111,'figures/animals-layout-corrected.png')
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% here let's do the uniform distribution in 2D
-% reproducing figure 3 of kohonen
-numsamples = 100;
-A = rand(2,numsamples);
-
-numiter = 10;
-randorder = 1;
-
-% initialize the kohonen weights
-% these are the m_i
-num_nodes = 25;
-B = rand(length(A(:,1)),num_nodes);
-
-node_network_size = [5,5]; % down x across
-
-% create the adjacency matrix
-C = zeros(num_nodes,num_nodes);
-for i=1:node_network_size(1) % down
-    for j=1:node_network_size(2) % across
-        indices = unique([sub2ind(node_network_size,i,min([node_network_size(2),j+1])),sub2ind(node_network_size,i,max([1,j-1])),sub2ind(node_network_size,max([1,i-1]),j),sub2ind(node_network_size,min([i+1,node_network_size(1)]),j)]);
-        % disp(indices);
-        C(sub2ind(node_network_size,i,j),indices) = 1;
-        C(indices,sub2ind(node_network_size,i,j)) = 1;
-        C(sub2ind(node_network_size,i,j),sub2ind(node_network_size,i,j)) =1;
-    end
+errors = zeros(size(sigmas));
+for j=1:length(sigmas)
+    errors(j) = rmse(output(j,:),exact);
 end
 
-iterations = [0,20,100,1000,5000,10000];
-% iterations = [0,10,20,30,40,50];
-
-figure(112);
-
-i=1;
-subplot(2,3,i);
-plot(B(1,:),B(2,:),'s');
-title(sprintf('%.0f iterations',iterations(i)))
-
-% train the weight matrices
-for i=2:length(iterations)
-    [B,errors_all] = train_SOM(A,B,C,iterations(i)-iterations(i-1),randorder,@scaling_inverse,@moore_decaying,iterations(i-1));
-    subplot(2,3,i);
-    plot(B(1,:),B(2,:),'s');
-    title(sprintf('%.0f iterations',iterations(i)))
-end
-
-saveas(112,'figures/SOM_uniform_dist_covering_long_corrected.png')
+figure(120)
+plot(sigmas,errors)
+xlabel('\sigma','FontSize',12)
+ylabel('RMSE','FontSize',12)
+saveas(120,'figures/GRNN-givenData-allsigma-sqdiff-RMSE-correct.png')

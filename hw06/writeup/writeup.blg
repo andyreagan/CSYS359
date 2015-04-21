@@ -1,0 +1,46 @@
+This is BibTeX, Version 0.99d (TeX Live 2013)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: writeup.aux
+The style file: chicago.bst
+Database file #1: writeup.bib
+You've used 2 entries,
+            2861 wiz_defined-function locations,
+            627 strings with 5059 characters,
+and the built_in function-call counts, 1203 in all, are:
+= -- 106
+> -- 52
+< -- 0
++ -- 16
+- -- 20
+* -- 96
+:= -- 221
+add.period$ -- 6
+call.type$ -- 2
+change.case$ -- 12
+chr.to.int$ -- 2
+cite$ -- 2
+duplicate$ -- 36
+empty$ -- 91
+format.name$ -- 20
+if$ -- 215
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 2
+newline$ -- 13
+num.names$ -- 20
+pop$ -- 6
+preamble$ -- 1
+purify$ -- 24
+quote$ -- 0
+skip$ -- 35
+stack$ -- 0
+substring$ -- 100
+swap$ -- 12
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 40
+warning$ -- 0
+while$ -- 24
+width$ -- 0
+write$ -- 28
